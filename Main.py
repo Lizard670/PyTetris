@@ -7,6 +7,7 @@ class Game:
     def __init__(self, skin, config):
         self.skin_config = skin
         self.cooldowns_times = config["cooldowns"]
+        self.matrix_size = config["matrix_size"]
 
         self.tetrominoes = []
         # I tetromino
@@ -212,10 +213,9 @@ class Game:
     def next_tetromino(self):
         # gets the new tetromino and sets the next index
         self.current_tetromino = self.queue[self.next_index]
-        self.next_index += 1
-
         self.reset_position()
-        # if the index get past 6 means that we need to reset the list
+        self.next_index += 1
+        # if the index get past 6 means that we need to reset the queue
         if self.next_index > 6:
             shuffle(self.queue)
             self.next_index = 0
@@ -231,6 +231,7 @@ class Game:
         self.can_hold = False
         self.reset_position()
 
+    # resets the position and rotation of the current tetromino
     def reset_position(self):
         # resets rotation
         self.tetromino_rotation = 0
@@ -241,6 +242,7 @@ class Game:
         self.tetromino_position = [int(6 - round(size / 2 + 0.2)), 20]
         self.move(0, -size)
 
+    # Move the current tetromino by x and y
     def move(self, x, y):
         if self.check_position((self.tetromino_position[0] + x, self.tetromino_position[1] + y)):
             self.tetromino_position[0] += x
@@ -250,13 +252,16 @@ class Game:
         else:
             return False
 
+    # Rotates clockwise the current tetromino "direction" times
+    # -1 Direction to rotate counter-clockwise
     def rotate(self, direction):
         # applies rotation
         r = self.tetromino_rotation + direction
         r = r if 0 <= r else 3
         r = r if r < 4 else 0
         self.tetromino_rotation = r
-        # Checks if its valid
+        # checks if its valid
+        # checks not only the current location, but also the adjacent spaces
         for x in [0, -1, 1]:
             for y in [0, -1, 1]:
                 if self.move(x, y):
@@ -269,6 +274,7 @@ class Game:
         self.tetromino_rotation = r
         return False
 
+    # Returns if the passed position is valid for the current tetromino
     def check_position(self, position):
         tetromino = self.current_tetromino
         tetromino_size = len(self.tetrominoes[tetromino][self.tetromino_rotation])
@@ -286,6 +292,7 @@ class Game:
                         return False
         return True
 
+    # place the current tetromino in the matrix and loads the next
     def set_tetromino(self):
         tetromino = self.current_tetromino
         tetromino_size = len(self.tetrominoes[tetromino][self.tetromino_rotation])
@@ -296,6 +303,7 @@ class Game:
                 real_x = self.tetromino_position[0] + x
                 if self.tetrominoes[tetromino][self.tetromino_rotation][y][x]:
                     self.matrix[real_y][real_x] = self.skin_config["colors"][self.current_tetromino]
+            # checks if the current line is a full line, if its, adds to the list
             if 0 <= real_y < 20:
                 full_line = True
                 for cell in self.matrix[real_y]:
@@ -304,6 +312,8 @@ class Game:
                         break
                 if full_line:
                     full_lines.append(real_y)
+        # for each full line, del it and appends a new empty one
+        # Reads it in reverse so the original index of the next lines is not altered before deleting
         for line in reversed(full_lines):
             del self.matrix[line]
             self.matrix.append([])
@@ -314,6 +324,7 @@ class Game:
         self.next_tetromino()
         self.can_hold = True
 
+    # Draws every element of the game
     def draw(self, screen):
         size = self.skin_config["block_size"]
         gap = self.skin_config["block_gap"]
@@ -361,6 +372,8 @@ class Game:
                 if not self.matrix[y][x] == -1:
                     self.draw_block(screen, x, y, size, gap, self.matrix[y][x])
 
+    # draws a single block
+    # x and y are converted from grid position to pixel
     def draw_block(self, screen, x, y, size, gap, color):
         rect = pygame.Rect(self.skin_config["matrix_position"][0] + x * (size + gap),
                            self.skin_config["matrix_position"][1] + (19 - y) * (size + gap),
@@ -382,6 +395,7 @@ if __name__ == '__main__':
                                  "vertical": 50,
                                  "drop": 200,
                                  "fall": 750,
-                                 "spin": 200}}
+                                 "spin": 200},
+                   "matrix_size": (10, 20)}
 
     game = Game(skin_config, game_config)
